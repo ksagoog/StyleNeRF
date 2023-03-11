@@ -91,7 +91,7 @@ class Dataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         image = self._load_raw_image(self._raw_idx[idx])
         assert isinstance(image, np.ndarray)
-        assert list(image.shape) == self.image_shape
+        assert list(image.shape) == self.image_shape, (self.image_shape, list(image.shape))
         assert image.dtype == np.uint8
         if self._xflip[idx]:
             assert image.ndim == 3 # CHW
@@ -160,9 +160,10 @@ class Dataset(torch.utils.data.Dataset):
 class ImageFolderDataset(Dataset):
     def __init__(self,
         path,                   # Path to directory or zip.
-        resolution      = None, # Ensure specific resolution, None = highest available.
+        resolution      = 256, # Ensure specific resolution, None = highest available.
         **super_kwargs,         # Additional arguments for the Dataset base class.
     ):
+        resolution = 256  # hack 
         self._path = path
         self._zipfile = None
 
@@ -222,12 +223,25 @@ class ImageFolderDataset(Dataset):
                 image = pyspng.load(f.read())
             else:
                 image = np.array(PIL.Image.open(f))
-        if image.ndim == 2:
-            image = image[:, :, np.newaxis] # HW => HWC
-        if hasattr(self, '_raw_shape') and image.shape[-1] != self.resolution:  # resize input image
-            image = cv2.resize(image, (self.resolution, self.resolution), interpolation=cv2.INTER_AREA)
-        image = image.transpose(2, 0, 1) # HWC => CHW
-        return image
+        old_image = image
+        try:
+                
+            if image.ndim == 2:
+                image = image[:, :, np.newaxis] # HW => HWC
+            assert image.ndim == 3
+            if hasattr(self, '_raw_shape') and image.shape[-1] != self.resolution:  # resize input image
+                image = cv2.resize(image, (self.resolution, self.resolution), interpolation=cv2.INTER_AREA)
+            if image.ndim == 2:
+                image = image[:, :, np.newaxis] # HW => HWC
+            if image.shape[-1] == 1:
+                image = np.concatenate([image, image, image], axis=-1)
+            image = image[..., :3]  # clip alpha channel, if any
+            image = image.transpose(2, 0, 1) # HWC => CHW
+            return image
+        except:
+            print(old_image.shape, image.shape, self.resolution)
+            raise
+            
 
     def _load_raw_labels(self):
         fname = 'dataset.json'

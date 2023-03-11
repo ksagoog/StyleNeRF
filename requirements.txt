@@ -1,6 +1,6 @@
 albumentations==1.0.3
 click==8.0.3
-clip-by-openai==1.1
+# clip-by-openai==1.1
 einops==0.3.0
 glfw==2.5.0
 gradio==2.3.9
@@ -11,19 +11,26 @@ lmdb==0.98
 lpips==0.1.4
 matplotlib==3.4.3
 numpy==1.21.2
-hydra-core==1.1
-opencv_python_headless==4.5.1.48
+hydra-core
+# opencv_python_headless==4.5.1.48
+opencv_python_headless
 Pillow==9.0.1
 psutil==5.8.0
 PyMCubes==0.1.2
 PyOpenGL==3.1.6
-pyspng==0.1.0
+# pyspng==0.1.0
+pyspng
 requests==2.26.0
-scipy==1.7.1
+# scipy==1.7.1
+scipy
 submitit==1.1.5
 tensorboardX==2.5
-torch==1.7.1
-torchvision==0.8.2
+tensorboard
+# torch==1.7.1
+# torchvision==0.8.2
+torchvision
 tqdm==4.62.2
+timm==0.4.5
 trimesh==3.9.8
 imageio-ffmpeg==0.4.5
+ninja

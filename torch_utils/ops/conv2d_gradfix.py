@@ -47,6 +47,8 @@ def conv_transpose2d(input, weight, bias=None, stride=1, padding=0, output_paddi
 #----------------------------------------------------------------------------
 
 def _should_use_custom_op(input):
+    return False
+    
     assert isinstance(input, torch.Tensor)
     if (not enabled) or (not torch.backends.cudnn.enabled):
         return False
