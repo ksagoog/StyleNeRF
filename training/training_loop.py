@@ -467,9 +467,10 @@ def training_loop(
                 with open(snapshot_pkl, 'wb') as f:
                     pickle.dump(snapshot_data, f)
                 # save the latest checkpoint
-                shutil.copy(snapshot_pkl, os.path.join(run_dir, 'latest-network-snapshot.pkl'))
+                shutil.copyfile(snapshot_pkl, os.path.join(run_dir, 'latest-network-snapshot.pkl'))
         
         # Evaluate metrics.
+        # if True:
         if (snapshot_data is not None) and (len(metrics) > 0) and (cur_tick > 1):
             if rank == 0:
                 print('Evaluating metrics...')

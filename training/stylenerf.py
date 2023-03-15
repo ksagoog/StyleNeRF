@@ -23,6 +23,14 @@ from torch_utils.ops.hash_sample import hash_sample
 from torch_utils.ops.grid_sample_gradfix import grid_sample
 from torch_utils.ops.nerf_utils import topp_masking
 from einops import repeat, rearrange
+from torch_utils import training_stats
+import dpt_utils
+
+
+def reshape_strip(t):
+    t = rearrange(t, "b (tt ttp) one -> b tt ttp one", tt=32, one=1)
+    t = t[:, :, 4:-4]
+    return t
 
 
 # --------------------------------- basic modules ------------------------------------------- #
@@ -1908,6 +1916,47 @@ class NeRFSynthesisNetwork(torch.nn.Module):
             img = img.masked_fill(mask > 0, -1)
 
         block_kwargs['img'] = img
+        
+        fg_depth_map = torch.sum(outputs.fg_weights * outputs.fg_depths[1], dim=-1, keepdim=True)
+        # block_kwargs['fg_depth_map'] = fg_depth_map
+        # print(fg_depth_map.shape)
+        # print(outputs.fg_weights.shape)
+        # print(outputs.fg_depths.shape)
+        
+        fg_depth_map = reshape_strip(fg_depth_map)
+        fg_disparity = 1. / torch.clip(fg_depth_map, min=1e-5)
+        
+        # print(fg_disparity.shape)
+        
+        compute_depth_loss = True
+        if compute_depth_loss:
+            dlweight = .5
+            fg_disparity = torch.nn.functional.interpolate(
+                    fg_disparity,
+                    size=(img.shape[-2], img.shape[-1]),
+                    mode='nearest'
+            )
+            
+            target_disparity = dpt_utils.run_dpt(dpt_utils.get_dpt_model(img.device), img)
+        
+            # scale, shift = dpt_utils.compute_scale_and_shift(
+            #     prediction=fg_disparity,
+            #     target=target_disparity
+            # )
+
+            def l2(t1, t2):
+                diffs = (t1 - t2) ** 2
+                return diffs.mean()
+            
+            depthacc_loss = l2(
+                dpt_utils.normalize_meanstd(fg_disparity),
+                dpt_utils.normalize_meanstd(target_disparity),
+                )
+            depthaccweighted_loss = dlweight * depthacc_loss
+            training_stats.report('depthacc_loss', depthacc_loss)
+            training_stats.report('depthaccweighted_loss', depthaccweighted_loss)
+            
+            block_kwargs['depthaccweighted_loss'] = depthaccweighted_loss
         return block_kwargs
 
     def get_current_resolution(self):

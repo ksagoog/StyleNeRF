@@ -32,6 +32,7 @@ class StyleGAN2Loss(Loss):
     def __init__(
         self, device, G_mapping, G_synthesis, D, 
         G_encoder=None, augment_pipe=None, D_ema=None,
+        depth_loss_weight=1.,
         style_mixing_prob=0.9, r1_gamma=10, 
         pl_batch_shrink=2, pl_decay=0.01, pl_weight=2, other_weights=None,
         curriculum=None, alpha_start=0.0, cycle_consistency=False, label_smooth=0,
@@ -47,6 +48,7 @@ class StyleGAN2Loss(Loss):
         self.augment_pipe      = augment_pipe
         self.style_mixing_prob = style_mixing_prob
         self.r1_gamma          = r1_gamma
+        self.depth_loss_weight = depth_loss_weight
         self.pl_batch_shrink   = pl_batch_shrink
         self.pl_decay          = pl_decay
         self.pl_weight         = pl_weight
@@ -140,6 +142,7 @@ class StyleGAN2Loss(Loss):
 
     def get_loss(self, outputs, module='D'):
         reg_loss, logs, del_keys = 0, [], []
+                
         if isinstance(outputs, dict):
             for key in outputs:
                 if key[-5:] == '_loss':
